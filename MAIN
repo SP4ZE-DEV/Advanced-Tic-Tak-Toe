@@ -1,0 +1,196 @@
+/*
+---ANALYSIS--
+
+user input table
+[1] [2] [3] 
+[4] [5] [6]
+[7] [8] [9]
+
+coord table
+[0,0] [0,1] [0,2]
+[1,0] [1,1] [1,2]
+[2,0] [2,1] [2,2]
+
+win properties diagonal
+- must be symmetrical difference from middle
+- both win types must have center coord [1,1]
+- middle must be odd
+
+win properties horizontal
+- all rows have same x cord
+- arithmetic sequence
+
+win properties vertical 
+- arithmetic sequence
+- all rows have same y cord
+
+*/
+
+// setup
+
+bool win = false;
+
+char[,] grid_2d = {
+    {'1', '2', '3' },
+    {'4', '5', '6' },
+    {'7', '8', '9' }
+};
+
+// MAPPING INPUT TO COORDINATES
+Dictionary<char, int[]> input_to_grid = new Dictionary<char, int[]>()
+{
+    { '1', new int[] {0,0}},
+    { '2', new int[] {0,1}},
+    { '3', new int[] {0,2}},
+    { '4', new int[] {1,0}},
+    { '5', new int[] {1,1}},
+    { '6', new int[] {1,2}},
+    { '7', new int[] {2,0}},
+    { '8', new int[] {2,1}},
+    { '9', new int[] {2,2}}
+};
+
+ConsoleKeyInfo input;
+ 
+// - DISPLAY GRID -
+void RefreshGrid()
+{
+    Console.Clear();
+    Console.WriteLine(@$"  
+
+              {grid_2d[0,0]}  |  {grid_2d[0,1]}  |  {grid_2d[0,2]}  
+            -----|-----|-----
+              {grid_2d[1, 0]}  |  {grid_2d[1,1]}  |  {grid_2d[1,2]} 
+            -----|-----|-----
+              {grid_2d[2,0]}  |  {grid_2d[2,1]}  |  {grid_2d[2,2]} 
+    ");
+}
+
+// - AI move -
+Random rand= new();
+int ai_move_x = 0;
+int ai_move_y = 0;
+int ai_moves_count = 0;
+// AI strategy : first 3 moves are random based, due to more free spaces, random attempts find place faster with total 38% chance requiring 1 try per move for all 3 turns
+// later, the strategy selects incomplete player columns and rows, taking advantage of winchecking algorithm
+void AIMove()
+{
+    //do
+    //{
+    //    ai_move_x = rand.Next(0, 3);
+    //    ai_move_y = rand.Next(0, 3);
+    //}
+    //while (grid_2d[ai_move_x, ai_move_y] != 'X');
+    // ----------------------------------------------------AI SYSTEM WORK IN PROGRESS
+
+    // check if coords are free (transverse 2d array)
+    for (int j = 0; j < 3; j++)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (char.IsDigit(grid_2d[i,j]))
+            {
+                grid_2d[i, j] = 'O';
+
+                RefreshGrid();
+                WinCheck('O', new int[] {i,j});
+                Thread.Sleep(700);
+
+                return;
+            }
+        }
+    }
+}
+
+
+// - WIN CHECK -
+void WinCheck(char player_mark, int[] coords)
+{
+    // scan horizontal row
+    for (int i = 0; i < 3; i++)
+    {
+        if (grid_2d[i,coords[1]] != player_mark) 
+        {
+            break; // other sign present in row
+        }
+        else if (i == 2)
+        {
+            Console.WriteLine($"\n\n--- PLAYER {player_mark} WINS VERTICALLY! ---");
+            win = true;
+        }
+    }
+    // scan vertical column
+    for (int j = 0; j < 3; j++)
+    {
+        if (grid_2d[coords[0], j] != player_mark) 
+        {
+            break; // other sign present in column (due to indexing for 2d array being row column, which is [y,x] the graph has to be at 90 degrees which isnt conventient)
+        }
+        else if (j == 2)
+        {
+            Console.WriteLine($"\n\n--- PLAYER {player_mark} WINS HORIZONTALLY! ---");
+            win = true;
+        }
+    }
+    // scan diagonal
+    if (grid_2d[1,1] == player_mark) // if middle taken by player, else dont even check
+    {
+        if (grid_2d[2,0] == player_mark && grid_2d[0,2] == player_mark || grid_2d[0,0] == player_mark && grid_2d[2,2] == player_mark)
+        {
+            Console.WriteLine($"\n\n--- PLAYER {player_mark} WINS DIAGONALLY! ---");
+            win = true;
+        }
+    }
+}
+
+// ---------- MAIN ----------
+
+// INTRO
+Console.WriteLine("| TIC TAC TOE | \n\n--- PRESS ENTER TO START ->");
+Console.ReadLine();
+
+RefreshGrid();
+for (int i = 0; i < 5; i++)
+{
+    // PLAYER INPUT
+    bool valid_flag = false;
+    int[]? coords;
+    do
+    {       
+        Console.WriteLine("PRESS A NUMBER ON THE GRID TO PUT A CROSS");
+        input = Console.ReadKey();
+
+        if (char.IsDigit(input.KeyChar))
+        {
+            // if such number exists on grid
+            if (input_to_grid.TryGetValue(input.KeyChar, out coords))
+            {
+                grid_2d[coords[0], coords[1]] = 'X';  
+                RefreshGrid();
+                WinCheck('X', [coords[0], coords[1]]); 
+                valid_flag = true;
+            } 
+            else Console.WriteLine(" - x - That coord is unavailable, try again");
+        }
+        else Console.WriteLine(" - x - Not a number, try again");
+
+    } while (!valid_flag);
+
+    // game over check & AI move
+    if (win)
+    {
+        Console.Write("--- GAME OVER ---");
+        break;
+    }
+
+    if (i == 4)
+    {
+        Console.WriteLine( "\n\n--- GAME OVER DRAW ---");
+        break;
+    }
+    else AIMove();
+    if (win)
+    {
+        break;
+    }
+}
