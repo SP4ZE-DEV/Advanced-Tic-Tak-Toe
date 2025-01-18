@@ -71,35 +71,27 @@ Random rand= new();
 int ai_move_x = 0;
 int ai_move_y = 0;
 int ai_moves_count = 0;
-// AI strategy : first 3 moves are random based, due to more free spaces, random attempts find place faster with total 38% chance requiring 1 try per move for all 3 turns
+// AI strategy : first 2 moves are random based, due to more free space, finds random places from 1st try for both 2 turns with 59% probability
 // later, the strategy selects incomplete player columns and rows, taking advantage of winchecking algorithm
 void AIMove()
 {
-    //do
-    //{
-    //    ai_move_x = rand.Next(0, 3);
-    //    ai_move_y = rand.Next(0, 3);
-    //}
-    //while (grid_2d[ai_move_x, ai_move_y] != 'X');
-    // ----------------------------------------------------AI SYSTEM WORK IN PROGRESS
-
-    // check if coords are free (transverse 2d array)
-    for (int j = 0; j < 3; j++)
+    if (ai_moves_count < 2)
     {
-        for (int i = 0; i < 3; i++)
+        do
         {
-            if (char.IsDigit(grid_2d[i,j]))
-            {
-                grid_2d[i, j] = 'O';
-
-                RefreshGrid();
-                WinCheck('O', new int[] {i,j});
-                Thread.Sleep(700);
-
-                return;
-            }
+            ai_move_x = rand.Next(0, 3);
+            ai_move_y = rand.Next(0, 3);
         }
+        while (!char.IsDigit(grid_2d[ai_move_x, ai_move_y])); // && grid_2d[ai_move_x, ai_move_y] == 'X'
     }
+    // else ai move coords will be set during WinCheck
+
+    ai_moves_count++;
+    Thread.Sleep(700);
+    grid_2d[ai_move_x, ai_move_y] = 'O';
+
+    RefreshGrid();
+    WinCheck('O', [ai_move_x,ai_move_y]);
 }
 
 
@@ -107,13 +99,20 @@ void AIMove()
 void WinCheck(char player_mark, int[] coords)
 {
     // scan horizontal row
-    for (int i = 0; i < 3; i++)
+    for (int r = 0; r < 3; r++)
     {
-        if (grid_2d[i,coords[1]] != player_mark) 
+        if (grid_2d[r,coords[1]] != player_mark) 
         {
+            // check if this slot is free to defend
+            if (char.IsDigit(grid_2d[r, coords[1]]))
+            {
+                ai_move_x = r;
+                ai_move_y = coords[1];
+            }
+            else ai_moves_count = 1;
             break; // other sign present in row
         }
-        else if (i == 2)
+        else if (r == 2)
         {
             Console.WriteLine($"\n\n--- PLAYER {player_mark} WINS VERTICALLY! ---");
             win = true;
@@ -124,6 +123,13 @@ void WinCheck(char player_mark, int[] coords)
     {
         if (grid_2d[coords[0], j] != player_mark) 
         {
+            // check if this slot is free to defend
+            if (char.IsDigit(grid_2d[coords[0], j]))
+            {
+                ai_move_x = coords[0];
+                ai_move_y = j;
+            }
+            else ai_moves_count = 1;
             break; // other sign present in column (due to indexing for 2d array being row column, which is [y,x] the graph has to be at 90 degrees which isnt conventient)
         }
         else if (j == 2)
@@ -146,12 +152,28 @@ void WinCheck(char player_mark, int[] coords)
 // ---------- MAIN ----------
 
 // INTRO
-Console.WriteLine("| TIC TAC TOE | \n\n--- PRESS ENTER TO START ->");
+Console.WriteLine(@"
+       | TIC TAC TOE |
+         X  | O |  X
+        ----|---|----
+         >  | X |  <
+        ----|---|----
+         X  | O |  X
+                         __
+--- PRESS ENTER TO START    \
+                           \|/
+");
 Console.ReadLine();
 
 RefreshGrid();
 for (int i = 0; i < 5; i++)
 {
+    if (win)
+    {
+        Console.WriteLine("GAME WIN");
+        break;
+    }
+
     // PLAYER INPUT
     bool valid_flag = false;
     int[]? coords;
@@ -163,14 +185,15 @@ for (int i = 0; i < 5; i++)
         if (char.IsDigit(input.KeyChar))
         {
             // if such number exists on grid
-            if (input_to_grid.TryGetValue(input.KeyChar, out coords))
+            if (input_to_grid.TryGetValue(input.KeyChar, out coords) && char.IsDigit(grid_2d[coords[0], coords[1]]))
             {
                 grid_2d[coords[0], coords[1]] = 'X';  
                 RefreshGrid();
+
                 WinCheck('X', [coords[0], coords[1]]); 
                 valid_flag = true;
             } 
-            else Console.WriteLine(" - x - That coord is unavailable, try again");
+            else Console.WriteLine(" - x - That place is unavailable, try again");
         }
         else Console.WriteLine(" - x - Not a number, try again");
 
@@ -189,8 +212,5 @@ for (int i = 0; i < 5; i++)
         break;
     }
     else AIMove();
-    if (win)
-    {
-        break;
-    }
 }
+Console.ReadLine();
